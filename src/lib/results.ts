@@ -46,7 +46,25 @@ export interface MpResult {
   tuningNotes: string[];
 }
 
+/**
+ * Final shape the pipeline writes for platforms without a bespoke card
+ * (wb/zh/bjh/csdn) and as the error placeholder for any platform whose
+ * generation failed (see `errorDraft` in the pipeline stages).
+ */
+export interface GenericResult {
+  kind: "generic";
+  title: string;
+  sections: string[];
+  hashtags?: string[];
+  tuningNotes: string[];
+  /** true when this is an error placeholder for a failed platform */
+  error?: boolean;
+}
+
 export type PlatformResult = XhsResult | DyResult | MpResult;
+
+/** What `TaskDetail.finals` actually carries per platform. */
+export type FinalResult = PlatformResult | GenericResult;
 
 export const DEMO_RESULTS: Partial<Record<PlatformId, PlatformResult>> = {
   xhs: {
