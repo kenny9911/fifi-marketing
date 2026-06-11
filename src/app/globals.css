@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  /* ===== FiFi 灰灰营销 design tokens (from FiFi Marketing.dc.html) ===== */
+  --color-ink: #17130c;
+  --color-paper: #fffdf7;
+  --color-cream: #fbf3e4;
+  --color-sand: #e8e3d8;
+
+  --color-poppy: #ff4b2e;
+  --color-klein: #2849f4;
+  --color-sun: #ffc53d;
+  --color-jade: #0fa36b;
+  --color-rose: #ff7ab6;
+  --color-amber-deep: #d99a00;
+  --color-mist: #c9d4ff;
+
+  --color-soot: #5a523f;
+  --color-stone: #8a8170;
+  --color-tan: #d8cfbe;
+  --color-tan-light: #e5dcc8;
+  --color-tan-mid: #c9bfa9;
+  --color-tan-dark: #b7ae9c;
+
+  /* platform brand colors */
+  --color-xhs: #ff2442;
+  --color-douyin: #161823;
+  --color-douyin-cyan: #25f4ee;
+  --color-douyin-red: #fe2c55;
+  --color-wechat: #07c160;
+  --color-weibo: #e6162d;
+  --color-zhihu: #0084ff;
+  --color-baijia: #2932e1;
+  --color-csdn: #fc5531;
+
+  /* typography */
+  --font-sans: var(--font-noto-sans-sc), "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+  --font-display: var(--font-zcool-huangyou), var(--font-noto-sans-sc),
+    "PingFang SC", sans-serif;
+  --font-grotesk: var(--font-space-grotesk), "Helvetica Neue", Arial, sans-serif;
+  --font-archivo: var(--font-archivo-black), "Arial Black", sans-serif;
+
+  /* motion */
+  --animate-marquee: marquee 22s linear infinite;
+  --animate-blink: blink 1.2s infinite;
+  --animate-spin-slow: spin 14s linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes blink {
+    0%,
+    80%,
+    100% {
+      opacity: 0.25;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-blink,
+  .animate-spin-slow {
+    animation: none;
+  }
+}
+
+/* thin dark-surface scrollbars for the studio panels */
+.scrollbar-studio {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 253, 247, 0.25) transparent;
+}
+.scrollbar-chat {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(23, 19, 12, 0.2) transparent;
+}
