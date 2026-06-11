@@ -37,20 +37,27 @@ export function TuningNotes({
 
 /**
  * Action row under a result card: one filled primary button plus two
- * outlined ones. When `copyText` is set, the primary button writes it to the
- * clipboard and flashes 已复制 ✓ for ~1.6s; otherwise it stays visual-only,
- * like the secondary buttons (real refinement actions arrive with the agent
- * backend).
+ * outlined refine buttons. When `copyText` is set, the primary button writes
+ * it to the clipboard and flashes 已复制 ✓ for ~1.6s. The secondary buttons
+ * fire `onSecondary(label)` — wired upstream to the revision flow (a task
+ * message that triggers a targeted reedit). Without a handler they render
+ * disabled, with `secondaryDisabledReason` explaining why (req 9).
  */
 export function ResultActions({
   primary,
   copyText,
   secondary,
+  onSecondary,
+  secondaryDisabledReason,
   className,
 }: {
   primary: string;
   copyText?: string;
   secondary: [string, string];
+  /** invoked with the clicked button's label, e.g. 换个角度 */
+  onSecondary?: (label: string) => void;
+  /** shown as the disabled buttons' title when `onSecondary` is absent */
+  secondaryDisabledReason?: string;
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -84,15 +91,29 @@ export function ResultActions({
       >
         {copied ? "已复制 ✓" : primary}
       </button>
-      {secondary.map((label) => (
-        <button
-          key={label}
-          type="button"
-          className="cursor-pointer rounded-[10px] border-[1.5px] border-ink bg-paper px-4 py-[11px] text-[13.5px] font-bold transition-colors hover:bg-cream"
-        >
-          {label}
-        </button>
-      ))}
+      {secondary.map((label) =>
+        onSecondary ? (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onSecondary(label)}
+            title={`让专家按「${label}」回炉重做本平台稿件`}
+            className="cursor-pointer rounded-[10px] border-[1.5px] border-ink bg-paper px-4 py-[11px] text-[13.5px] font-bold transition-colors hover:bg-cream"
+          >
+            {label}
+          </button>
+        ) : (
+          <button
+            key={label}
+            type="button"
+            disabled
+            title={secondaryDisabledReason ?? "交付完成后才能回炉微调"}
+            className="cursor-not-allowed rounded-[10px] border-[1.5px] border-tan-mid bg-cream px-4 py-[11px] text-[13.5px] font-bold text-stone"
+          >
+            {label}
+          </button>
+        ),
+      )}
     </div>
   );
 }

@@ -3,9 +3,9 @@ import type { PlatformId } from "./types";
 /**
  * Canned demo outputs for the studio results panel.
  *
- * These mirror the design prototype exactly. When the AI agent backend lands,
- * `generateContent` in `generation.ts` will return real per-platform content
- * in these same shapes — the result cards only know about these types.
+ * These mirror the design prototype exactly. The agent pipeline returns real
+ * per-platform content in these same shapes (finals in `artifacts` rows) —
+ * the result cards only know about these types.
  */
 
 export interface XhsResult {

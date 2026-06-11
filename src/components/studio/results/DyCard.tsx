@@ -5,7 +5,16 @@ import {
 import type { DyResult } from "@/lib/results";
 
 /** 抖音 result card: dark video header + timed shot list + tuning notes. */
-export function DyCard({ result }: { result: DyResult }) {
+export function DyCard({
+  result,
+  onRefine,
+  refineDisabledReason,
+}: {
+  result: DyResult;
+  /** sends a preset revision directive (label) through the chat flow */
+  onRefine?: (label: string) => void;
+  refineDisabledReason?: string;
+}) {
   const copyText = [
     result.title,
     "",
@@ -47,6 +56,8 @@ export function DyCard({ result }: { result: DyResult }) {
           primary="复制脚本"
           copyText={copyText}
           secondary={["换个钩子", "改 30s 版"]}
+          onSecondary={onRefine}
+          secondaryDisabledReason={refineDisabledReason}
         />
       </div>
     </div>

@@ -19,9 +19,20 @@ export function SiteNav() {
             <a href="#experts">AI 专家团</a>
             <a href="#showcase">案例</a>
             <a href="#cta">价格</a>
+            <Link href="/guide" title="各平台创作知识库">
+              创作指南
+            </Link>
           </nav>
           <Link
+            href="/login"
+            title="登录已有账号"
+            className="hidden sm:inline-block border-2 border-ink bg-transparent text-ink px-[18px] py-[9px] rounded-full font-bold text-[14.5px]"
+          >
+            登录
+          </Link>
+          <Link
             href="/studio"
+            title="进入灰灰创作台"
             className="bg-ink text-paper px-[22px] py-[11px] rounded-full font-bold text-[14.5px] shadow-[4px_4px_0_#FF4B2E]"
           >
             免费开始创作

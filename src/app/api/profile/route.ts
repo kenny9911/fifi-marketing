@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/server/db";
-import { hashSecret, verifySecret } from "@/server/crypto";
+import { generateRecoveryCode, hashSecret, verifySecret } from "@/server/crypto";
 import { ApiError, handle, readJson, requireUser, toUserDtoWithAvatar } from "@/server/auth";
 import type { UserRow } from "@/server/auth";
 import { PLATFORMS } from "@/lib/platforms";
@@ -26,6 +26,12 @@ const putSchema = z.object({
     })
     .optional(),
   avatarFileId: z.string().min(1).optional(),
+  /** authenticated recovery-code rotation: requires the current password */
+  rotateRecoveryCode: z
+    .object({
+      password: z.string().min(1, "请输入当前密码"),
+    })
+    .optional(),
 });
 
 export const GET = handle(async () => {
@@ -41,6 +47,8 @@ export const PUT = handle(async (req) => {
   let passwordHash = user.password_hash;
   let avatarKey = user.avatar_key;
   let settingsJson = user.settings_json;
+  let recoveryCodeHash: string | null = null;
+  let freshRecoveryCode: string | null = null;
 
   if (body.displayName !== undefined) {
     displayName = body.displayName;
@@ -71,10 +79,30 @@ export const PUT = handle(async (req) => {
     avatarKey = file.minio_key;
   }
 
-  db.prepare(
-    "UPDATE users SET display_name = ?, password_hash = ?, avatar_key = ?, settings_json = ? WHERE id = ?",
-  ).run(displayName, passwordHash, avatarKey, settingsJson, user.id);
+  // Rotate the recovery code in place (SPEC §6 /settings): a logged-in user
+  // who lost the old code can mint a new one by re-proving the password. The
+  // fresh code rides back in the response ONCE and is stored hashed-only.
+  if (body.rotateRecoveryCode !== undefined) {
+    if (!verifySecret(body.rotateRecoveryCode.password, user.password_hash)) {
+      throw new ApiError(400, "当前密码不正确");
+    }
+    freshRecoveryCode = generateRecoveryCode();
+    recoveryCodeHash = hashSecret(freshRecoveryCode);
+  }
+
+  if (recoveryCodeHash !== null) {
+    db.prepare(
+      "UPDATE users SET display_name = ?, password_hash = ?, avatar_key = ?, settings_json = ?, recovery_code_hash = ? WHERE id = ?",
+    ).run(displayName, passwordHash, avatarKey, settingsJson, recoveryCodeHash, user.id);
+  } else {
+    db.prepare(
+      "UPDATE users SET display_name = ?, password_hash = ?, avatar_key = ?, settings_json = ? WHERE id = ?",
+    ).run(displayName, passwordHash, avatarKey, settingsJson, user.id);
+  }
 
   const updated = db.prepare("SELECT * FROM users WHERE id = ?").get(user.id) as UserRow;
-  return NextResponse.json({ user: await toUserDtoWithAvatar(updated) });
+  return NextResponse.json({
+    user: await toUserDtoWithAvatar(updated),
+    ...(freshRecoveryCode !== null ? { recoveryCode: freshRecoveryCode } : {}),
+  });
 });

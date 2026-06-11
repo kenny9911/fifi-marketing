@@ -216,6 +216,16 @@ export interface ModelDto {
   lastValidatedAt: string | null;
 }
 
+export interface SkillDto {
+  id: string;
+  platform: PlatformId | null;
+  name: string;
+  content: string;
+  version: number;
+  status: string;
+  updatedAt: string;
+}
+
 export interface EvolutionRunDto {
   id: string;
   ts: string;

@@ -6,7 +6,16 @@ import {
 import type { XhsResult } from "@/lib/results";
 
 /** 小红书 result card: cover mock + note body + hashtags + tuning notes. */
-export function XhsCard({ result }: { result: XhsResult }) {
+export function XhsCard({
+  result,
+  onRefine,
+  refineDisabledReason,
+}: {
+  result: XhsResult;
+  /** sends a preset revision directive (label) through the chat flow */
+  onRefine?: (label: string) => void;
+  refineDisabledReason?: string;
+}) {
   const copyText = [
     result.title,
     "",
@@ -51,6 +60,8 @@ export function XhsCard({ result }: { result: XhsResult }) {
           primary="复制全文"
           copyText={copyText}
           secondary={["换个角度", "微调标题"]}
+          onSecondary={onRefine}
+          secondaryDisabledReason={refineDisabledReason}
           className="mt-4"
         />
       </div>

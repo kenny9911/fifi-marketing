@@ -10,8 +10,9 @@ import { Client } from "minio";
  * endpoint carries no scheme.
  *
  * TEST_MODE=mock swaps the whole thing for an in-memory Map behind the same
- * exports (presigned urls become `fake://<key>`), so tests never need a
- * running MinIO.
+ * exports (presigned urls become browser-loadable `data:` URLs, falling back
+ * to `fake://<key>` for objects the fake has never seen), so tests never need
+ * a running MinIO.
  */
 
 export const BUCKET = "fifi";
@@ -126,7 +127,13 @@ export async function presignedGetUrl(
   key: string,
   expirySeconds: number = PRESIGN_EXPIRY_SECONDS,
 ): Promise<string> {
-  if (isMock()) return `fake://${key}`;
+  if (isMock()) {
+    // Browser-loadable data URL so mock-mode <img> tags render without a
+    // console error; fake:// only for objects the in-memory store never saw.
+    const hit = mockStore.get(key);
+    if (hit) return `data:${hit.mime};base64,${hit.buf.toString("base64")}`;
+    return `fake://${key}`;
+  }
   return getClient().presignedGetObject(BUCKET, key, expirySeconds);
 }
 

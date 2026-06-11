@@ -5,7 +5,16 @@ import {
 import type { MpResult } from "@/lib/results";
 
 /** 公众号 result card: wechat strip + title/intro + numbered outline. */
-export function MpCard({ result }: { result: MpResult }) {
+export function MpCard({
+  result,
+  onRefine,
+  refineDisabledReason,
+}: {
+  result: MpResult;
+  /** sends a preset revision directive (label) through the chat flow */
+  onRefine?: (label: string) => void;
+  refineDisabledReason?: string;
+}) {
   return (
     <div className="overflow-hidden rounded-[18px] bg-paper">
       <div className="h-2 bg-wechat" />
@@ -36,6 +45,8 @@ export function MpCard({ result }: { result: MpResult }) {
         <ResultActions
           primary="展开全文"
           secondary={["换个标题", "调整大纲"]}
+          onSecondary={onRefine}
+          secondaryDisabledReason={refineDisabledReason}
           className="mt-4"
         />
       </div>
