@@ -17,6 +17,7 @@ const putSchema = z.object({
       defaultPlatforms: z.array(z.enum(platformIds)).optional(),
       hintsEnabled: z.boolean().optional(),
       locale: z.enum(["zh", "en"]).optional(),
+      currency: z.enum(["USD", "CNY"]).optional(),
     })
     .optional(),
   password: z

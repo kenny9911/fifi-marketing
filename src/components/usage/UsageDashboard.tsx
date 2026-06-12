@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "@/components/hooks/useSession";
+import { useCurrency, type Money } from "@/components/hooks/useCurrency";
 import { BurstStar } from "@/components/shared/BurstStar";
+import { CurrencyToggle } from "@/components/shared/CurrencyToggle";
 import { LogoMark } from "@/components/shared/LogoMark";
 import { Tip } from "@/components/shared/Tip";
 import type { UsageBucket, UsageReport } from "@/lib/api-types";
@@ -67,12 +69,10 @@ const AGENT_NAMES: Record<string, { name: string; role: string }> = {
 
 const intFmt = new Intl.NumberFormat("zh-CN");
 const fmtInt = (n: number) => intFmt.format(n);
-/** 表格成本统一 6 位小数（与 llm_calls 流水精度一致）。 */
-const fmtCost = (n: number) => `$${n.toFixed(6)}`;
-const fmtCostShort = (n: number) => `$${n.toFixed(4)}`;
-const fmtCostHero = (n: number) => (n >= 100 ? `$${n.toFixed(2)}` : `$${n.toFixed(4)}`);
 const fmtTokensCompact = (n: number) =>
   n >= 10000 ? `${(n / 10000).toFixed(1)}万` : fmtInt(n);
+// 成本一律经 useCurrency 的 Money 格式化（USD/CNY 切换；账本仍以 USD 记账）：
+// money.cost = 6dp 流水精度 · money.costShort = 4dp · money.costHero = 大数 2dp。
 
 /* ===== shared bits ===== */
 
@@ -114,6 +114,7 @@ const NUM_TD = "px-4 py-3.5 text-right font-archivo text-[13px]";
 export function UsageDashboard() {
   const { user } = useSession();
   const isAdmin = user?.role === "admin";
+  const { money } = useCurrency();
 
   const [scope, setScope] = useState<Scope>("task");
   const [dailyDays, setDailyDays] = useState<number>(7);
@@ -300,6 +301,12 @@ export function UsageDashboard() {
               </>
             )}
 
+            <span className="mx-1 h-5 w-[2px] rounded bg-tan" aria-hidden />
+            <span className="mr-0.5 font-grotesk text-[11px] font-bold tracking-[2px] text-stone">
+              货币
+            </span>
+            <CurrencyToggle />
+
             <div className="ml-auto flex flex-wrap items-center gap-2.5">
               {error && report && (
                 <span
@@ -420,17 +427,17 @@ export function UsageDashboard() {
             <EmptyState filtered={filtered} />
           ) : (
             <>
-              <HeroCards report={report} scope={scope} />
+              <HeroCards report={report} scope={scope} money={money} />
               {scope === "task" ? (
-                <TaskTable buckets={report.buckets} />
+                <TaskTable buckets={report.buckets} money={money} />
               ) : (
-                <BucketChart scope={scope} buckets={report.buckets} />
+                <BucketChart scope={scope} buckets={report.buckets} money={money} />
               )}
               <section className="mb-8">
                 <SectionHead title="成本分摊" en="BY AGENT / BY MODEL" />
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                  <AgentTable rows={report.byAgent} />
-                  <ModelTable rows={report.byModel} />
+                  <AgentTable rows={report.byAgent} money={money} />
+                  <ModelTable rows={report.byModel} money={money} />
                 </div>
               </section>
             </>
@@ -476,18 +483,28 @@ function EmptyState({ filtered }: { filtered: boolean }) {
   );
 }
 
-function HeroCards({ report, scope }: { report: UsageReport; scope: Scope }) {
+function HeroCards({
+  report,
+  scope,
+  money,
+}: {
+  report: UsageReport;
+  scope: Scope;
+  money: Money;
+}) {
   const t = report.totals;
   const bucketNoun = scope === "task" ? "个任务" : scope === "daily" ? "天" : "周";
   const cards = [
     {
       en: "TOTAL COST",
-      label: "总成本（美元）",
-      value: fmtCostHero(t.costUsd),
+      label: `总成本（${money.currency === "USD" ? "美元" : "人民币"}）`,
+      value: money.costHero(t.costUsd),
       strip: "bg-poppy",
       numClass: "text-poppy",
       sub: `跨 ${fmtInt(report.buckets.length)} ${bucketNoun}累计`,
-      tip: "计费 = tokens × 模型单价（USD），逐笔记入 llm_calls 流水；失败与回退调用同样计费",
+      tip: `计费 = tokens × 模型单价（USD），逐笔记入 llm_calls 流水；失败与回退调用同样计费${
+        money.currency === "CNY" ? ` · ${money.rateLabel}` : ""
+      }`,
     },
     {
       en: "TOTAL TOKENS",
@@ -536,7 +553,15 @@ function HeroCards({ report, scope }: { report: UsageReport; scope: Scope }) {
 }
 
 /** 按日 / 按周横向柱状图：宽度按窗口内最大值归一化；全零成本时回退按 tokens 归一化。 */
-function BucketChart({ scope, buckets }: { scope: Scope; buckets: UsageBucket[] }) {
+function BucketChart({
+  scope,
+  buckets,
+  money,
+}: {
+  scope: Scope;
+  buckets: UsageBucket[];
+  money: Money;
+}) {
   const byCost = buckets.some((b) => b.costUsd > 0);
   const metric = (b: UsageBucket) =>
     byCost ? b.costUsd : b.promptTokens + b.completionTokens;
@@ -557,7 +582,7 @@ function BucketChart({ scope, buckets }: { scope: Scope; buckets: UsageBucket[] 
             return (
               <div
                 key={b.key}
-                title={`${b.label} · 调用 ${fmtInt(b.calls)} 次 · ${fmtInt(tokens)} tokens · ${fmtCost(b.costUsd)}`}
+                title={`${b.label} · 调用 ${fmtInt(b.calls)} 次 · ${fmtInt(tokens)} tokens · ${money.cost(b.costUsd)}`}
                 className="group flex cursor-default items-center gap-3"
               >
                 <div className="w-[88px] shrink-0 truncate text-right font-grotesk text-[11px] font-bold tracking-[0.5px] text-tan-dark">
@@ -575,7 +600,7 @@ function BucketChart({ scope, buckets }: { scope: Scope; buckets: UsageBucket[] 
                 </div>
                 <div className="w-[140px] shrink-0 text-right">
                   <span className="font-archivo text-[12px] text-paper transition-colors group-hover:text-sun">
-                    {byCost ? fmtCostShort(b.costUsd) : `${fmtTokensCompact(tokens)} tokens`}
+                    {byCost ? money.costShort(b.costUsd) : `${fmtTokensCompact(tokens)} tokens`}
                   </span>
                   <span className="ml-2 text-[11px] text-stone">{fmtInt(b.calls)} 次</span>
                 </div>
@@ -604,7 +629,7 @@ function BucketChart({ scope, buckets }: { scope: Scope; buckets: UsageBucket[] 
   );
 }
 
-function TaskTable({ buckets }: { buckets: UsageBucket[] }) {
+function TaskTable({ buckets, money }: { buckets: UsageBucket[]; money: Money }) {
   return (
     <section className="mb-8">
       <SectionHead title="任务用量明细" en="BY TASK" />
@@ -638,7 +663,7 @@ function TaskTable({ buckets }: { buckets: UsageBucket[] }) {
                   <td className={NUM_TD}>
                     {fmtInt(b.promptTokens + b.completionTokens)}
                   </td>
-                  <td className={`${NUM_TD} text-poppy`}>{fmtCost(b.costUsd)}</td>
+                  <td className={`${NUM_TD} text-poppy`}>{money.cost(b.costUsd)}</td>
                   <td className="py-3.5 pl-4 pr-5 text-right">
                     <Tip tip="在创作台打开该任务，查看结果与对话">
                       <Link
@@ -659,7 +684,13 @@ function TaskTable({ buckets }: { buckets: UsageBucket[] }) {
   );
 }
 
-function AgentTable({ rows }: { rows: UsageReport["byAgent"] }) {
+function AgentTable({
+  rows,
+  money,
+}: {
+  rows: UsageReport["byAgent"];
+  money: Money;
+}) {
   const sorted = [...rows].sort((a, b) => b.costUsd - a.costUsd);
   const hasUnknown = sorted.some((r) => !AGENT_NAMES[r.agentId]);
   return (
@@ -717,7 +748,7 @@ function AgentTable({ rows }: { rows: UsageReport["byAgent"] }) {
                     <td className={NUM_TD}>
                       {fmtInt(r.promptTokens + r.completionTokens)}
                     </td>
-                    <td className={`${NUM_TD} pr-5 text-poppy`}>{fmtCost(r.costUsd)}</td>
+                    <td className={`${NUM_TD} pr-5 text-poppy`}>{money.cost(r.costUsd)}</td>
                   </tr>
                 );
               })
@@ -738,7 +769,13 @@ function AgentTable({ rows }: { rows: UsageReport["byAgent"] }) {
   );
 }
 
-function ModelTable({ rows }: { rows: UsageReport["byModel"] }) {
+function ModelTable({
+  rows,
+  money,
+}: {
+  rows: UsageReport["byModel"];
+  money: Money;
+}) {
   const sorted = [...rows].sort((a, b) => b.costUsd - a.costUsd);
   return (
     <div className="self-start overflow-hidden rounded-[18px] border-2 border-ink bg-paper shadow-[6px_6px_0_#17130C]">
@@ -781,7 +818,7 @@ function ModelTable({ rows }: { rows: UsageReport["byModel"] }) {
                   <td className={NUM_TD}>
                     {fmtInt(r.promptTokens + r.completionTokens)}
                   </td>
-                  <td className={`${NUM_TD} pr-5 text-poppy`}>{fmtCost(r.costUsd)}</td>
+                  <td className={`${NUM_TD} pr-5 text-poppy`}>{money.cost(r.costUsd)}</td>
                 </tr>
               ))
             )}

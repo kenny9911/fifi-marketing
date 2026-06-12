@@ -170,6 +170,17 @@ export interface UserSettings {
   defaultPlatforms?: PlatformId[];
   hintsEnabled?: boolean;
   locale?: "zh" | "en";
+  /** cost display currency; the ledger is always USD */
+  currency?: "USD" | "CNY";
+}
+
+/** GET /api/fx — display exchange rate (live mid-market or fixed fallback). */
+export interface FxRateDto {
+  base: "USD";
+  quote: "CNY";
+  rate: number;
+  source: "live" | "fallback";
+  fetchedAt: string;
 }
 
 export interface RegisterResponse {

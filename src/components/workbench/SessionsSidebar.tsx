@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { TaskStatus, TaskSummary } from "@/lib/api-types";
 import { getPlatform } from "@/lib/platforms";
+import { useCurrency } from "@/components/hooks/useCurrency";
 
 /** Status pill styling per TaskStatus, in the pop-collage palette. */
 const STATUS_META: Record<TaskStatus, { label: string; cls: string }> = {
@@ -28,11 +29,6 @@ function relativeTime(iso: string): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
-function formatCost(usd: number): string {
-  if (usd <= 0) return "$0";
-  if (usd < 0.01) return "<$0.01";
-  return `$${usd.toFixed(2)}`;
-}
 
 export interface SessionsSidebarProps {
   tasks: TaskSummary[];
@@ -56,6 +52,7 @@ export function SessionsSidebar({
   onNew,
   onDelete,
 }: SessionsSidebarProps) {
+  const { money } = useCurrency();
   /** task id with the delete-confirm popover open */
   const [confirmId, setConfirmId] = useState<string | null>(null);
   // If the task pending confirmation disappears (deleted elsewhere), the
@@ -167,9 +164,9 @@ export function SessionsSidebar({
                     </div>
                     <span
                       className="rounded-full border border-tan-mid bg-cream px-1.5 py-px font-archivo text-[10px] text-soot"
-                      title={`本任务累计成本 ${formatCost(task.costUsd)}（${task.tokens.toLocaleString("zh-CN")} tokens）`}
+                      title={`本任务累计成本 ${money.compact(task.costUsd)}（${task.tokens.toLocaleString("zh-CN")} tokens）· ${money.rateLabel}`}
                     >
-                      {formatCost(task.costUsd)}
+                      {money.compact(task.costUsd)}
                     </span>
                   </div>
                 </div>

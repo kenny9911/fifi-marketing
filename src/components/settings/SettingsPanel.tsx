@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { api, ApiClientError } from "@/lib/client-api";
 import { useSession } from "@/components/hooks/useSession";
+import { useCurrency } from "@/components/hooks/useCurrency";
 import { RecoveryCodeModal } from "@/components/auth/RecoveryCodeModal";
+import { CurrencyToggle } from "@/components/shared/CurrencyToggle";
 import { Tip } from "@/components/shared/Tip";
 import { PLATFORMS } from "@/lib/platforms";
 import type { PlatformId } from "@/lib/types";
@@ -60,6 +62,7 @@ function SettingsCard({
 /** Account settings panel: profile / preferences / security cards + toast. */
 export function SettingsPanel() {
   const { user, loading, refresh } = useSession();
+  const { money: currencyMoney } = useCurrency();
 
   const [displayName, setDisplayName] = useState("");
   const [settings, setSettings] = useState<UserSettings>({});
@@ -452,6 +455,18 @@ export function SettingsPanel() {
                 />
               </button>
             </Tip>
+          </div>
+
+          {/* cost display currency */}
+          <div className="flex items-start justify-between gap-4 border-t-[1.5px] border-dashed border-tan pt-5">
+            <div>
+              <div className="text-[13px] font-bold text-soot">成本显示货币</div>
+              <p className="mt-1 max-w-[520px] text-[12.5px] leading-[1.7] text-stone">
+                用量与成本以 {currencyMoney.currency === "USD" ? "美元" : "人民币"}
+                展示（账本始终以 USD 记账）。{currencyMoney.rateLabel}。
+              </p>
+            </div>
+            <CurrencyToggle />
           </div>
 
           {/* locale — interface is Chinese-only for now; the switch ships with i18n */}
