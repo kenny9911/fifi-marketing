@@ -54,26 +54,32 @@ function isMock(): boolean {
   return process.env.TEST_MODE === "mock";
 }
 
-/** Tavily web search. Missing key / failure → `{ results: [] }` + warn. */
+/**
+ * Tavily web search. Missing key / failure → `{ results: [], error }` + warn.
+ * `error` carries the actual cause so the pipeline timeline can show users
+ * what really happened (key missing vs. rejected vs. quota vs. no results).
+ */
 export async function webSearch(
   query: string,
   opts?: { maxResults?: number },
-): Promise<{ results: SearchResult[] }> {
+): Promise<{ results: SearchResult[]; error?: string }> {
   const maxResults = opts?.maxResults ?? 5;
   if (isMock()) {
     return { results: MOCK_SEARCH_RESULTS.slice(0, maxResults) };
   }
-  const apiKey = process.env.TAVILY_API_KEY;
+  const apiKey = process.env.TAVILY_API_KEY?.trim();
   if (!apiKey) {
     console.warn("[search] TAVILY_API_KEY missing — returning empty results");
-    return { results: [] };
+    return { results: [], error: "TAVILY_API_KEY 未配置" };
   }
   try {
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        api_key: apiKey,
         query,
         max_results: maxResults,
         include_answer: true,
@@ -81,8 +87,15 @@ export async function webSearch(
       signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
     });
     if (!res.ok) {
-      console.warn(`[search] Tavily HTTP ${res.status} for query "${query}"`);
-      return { results: [] };
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      console.warn(`[search] Tavily HTTP ${res.status} for query "${query}": ${body}`);
+      const hint =
+        res.status === 401
+          ? "Tavily 返回 401：API key 无效或已失效，请到 app.tavily.com 检查或更换 TAVILY_API_KEY"
+          : res.status === 429 || res.status === 432
+            ? `Tavily 返回 ${res.status}：配额用尽或请求过于频繁`
+            : `Tavily 返回 HTTP ${res.status}`;
+      return { results: [], error: hint };
     }
     const data = (await res.json()) as {
       answer?: unknown;
@@ -100,8 +113,9 @@ export async function webSearch(
     }
     return { results };
   } catch (err) {
-    console.warn(`[search] Tavily request failed: ${err instanceof Error ? err.message : err}`);
-    return { results: [] };
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[search] Tavily request failed: ${msg}`);
+    return { results: [], error: `Tavily 请求失败：${msg}` };
   }
 }
 

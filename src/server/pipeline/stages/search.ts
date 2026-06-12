@@ -29,6 +29,7 @@ export async function searchStage(ctx: StageCtx): Promise<ResearchPack> {
   ];
 
   const results: SearchResult[] = [];
+  const searchErrors: string[] = [];
   for (const query of queries) {
     emitEvent(ctx.taskId, {
       type: "tool_call",
@@ -38,14 +39,21 @@ export async function searchStage(ctx: StageCtx): Promise<ResearchPack> {
     });
     const r = await webSearch(query, { maxResults: 5 });
     results.push(...r.results);
+    if (r.error && !searchErrors.includes(r.error)) searchErrors.push(r.error);
   }
 
   if (results.length === 0) {
     emitEvent(ctx.taskId, {
       type: "error",
       agentId: "searcher",
-      title: "搜索服务未配置或无结果，使用简报信息继续",
-      detail: { text: "TAVILY_API_KEY 缺失或搜索返回为空，情报搜集降级。" },
+      title: searchErrors.length
+        ? "搜索服务异常，使用简报信息继续"
+        : "搜索无结果，使用简报信息继续",
+      detail: {
+        text: searchErrors.length
+          ? `${searchErrors.join("；")}。情报搜集降级，仅基于简报创作。`
+          : "两组查询均无返回结果，情报搜集降级，仅基于简报创作。",
+      },
     });
   }
 
