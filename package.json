@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:usecases": "node tests/usecases.mjs",
+    "test:e2e": "python3 /Users/kenny/.claude/skills/webapp-testing/scripts/with_server.py --server \"env FIFI_DB_PATH=data/fifi-e2e.db TEST_MODE=mock PORT=3221 NEXT_DIST_DIR=.next-e2e npm run dev\" --port 3221 -- python3 tests/e2e/ui-smoke.py"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",

@@ -266,6 +266,13 @@ export async function chatComplete(opts: ChatCompleteOpts): Promise<ChatComplete
   // ---- TEST_MODE=mock short-circuit (still logs an llm_calls row) ----
   if (process.env.TEST_MODE === "mock") {
     const startedAt = Date.now();
+    // Deterministic latency hook (SPEC §7 mock contract): when the request
+    // text carries the MOCK_SLOW marker (tests put it in the brief goal),
+    // every mock call takes ~250ms so a suite can observe a pipeline while
+    // it is still in flight (e.g. mid-run cancellation). No-op otherwise.
+    if (finalMessages.some((m) => contentText(m.content).includes("MOCK_SLOW"))) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 250));
+    }
     const mock = mockComplete({ ...opts, messages: finalMessages });
     const latencyMs = Date.now() - startedAt;
     const modelId = opts.model ?? agent?.model_id ?? process.env.LLM_MODEL_DEFAULT ?? "mock/fixture";

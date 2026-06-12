@@ -1,37 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 灰灰营销 FiFi — AI-Native Content Studio
 
-## Getting Started
+一句话，承包你的全网内容。One brief → platform-tuned content for 微博 · 公众号 · 小红书 · 抖音 · 知乎 · 百家号 · CSDN, produced by a multi-agent AI content department (search → prompt-craft → craft → organize → critic → review → re-edit → finalize) with live thinking output, full cost accounting, and self-evolving prompts.
 
-First, run the development server:
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env   # or create .env per the table below
+npm run dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sign in at `/login` (register a user, or use the seeded admin `admin` / `FiFi_Admin_2026!` — override with `ADMIN_PASSWORD`; change it in production). Create content at `/studio`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Run everything offline/free with deterministic mock LLMs:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+TEST_MODE=mock npm run dev
+```
 
-## Learn More
+## Environment (`.env`)
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENROUTER_API_KEY` | ✅ | Default gateway for all models without a direct key (Anthropic/Google/DeepSeek…) |
+| `OPENAI_API_KEY` / `MOONSHOT_API_KEY` / `MINIMAX_API_KEY` | – | Direct-provider routing for `openai/*`, `moonshotai/*`, `minimax/*` |
+| `LLM_MODEL_DEFAULT` | – | Fallback model id (default `google/gemini-3-flash-preview`) |
+| `TAVILY_API_KEY` / `FIRECRAWL_API_KEY` | – | Research stage web search / scraping (degrades gracefully if absent) |
+| `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` / `MINIO_SECURE` | ✅ for files/images | Object storage for uploads, avatars, generated images |
+| `AUTH_SECRET` | production | JWT signing secret |
+| `ADMIN_PASSWORD` | – | Seeded admin password |
+| `TEST_MODE=mock` | – | Deterministic offline mode (tests/CI) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Model ids and per-million pricing are seeded from the registry (editable at `/admin` → 模型); invalid ids are validated against live provider lists and never sent.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Pages
 
-## Deploy on Vercel
+| Route | What |
+|---|---|
+| `/` | Landing (pop-collage design) |
+| `/studio` | Workbench: sessions history, conversational brief + file uploads, live flight deck (stage tracker, agent thinking timeline, finals, prompt packs, image generation, cost chip) |
+| `/usage` | Cost & tokens per task / daily / weekly, by agent & model |
+| `/admin` | Per-agent model assignment, prompt versions, model registry + validation, skills, self-evolution reports |
+| `/settings` | Profile, avatar, preferences, password |
+| `/guide` | Researched per-platform content playbook (57 sources) |
+| `/login` | Login / register / on-screen recovery-code password reset |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tests
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# fifi-marketing
+```bash
+npm run test:usecases   # 21 platform use cases + edge cases, end-to-end through the API (mock mode)
+npm run test:e2e        # Playwright browser journey (mock mode)
+```
+
+## Docs
+
+- [docs/PLAN.md](docs/PLAN.md) — requirements map & decisions
+- [docs/SPEC.md](docs/SPEC.md) — binding architecture contract
+- [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) — how it's built, how to extend
+- [docs/RESEARCH-NOTES.md](docs/RESEARCH-NOTES.md) — platform know-how research + sources
